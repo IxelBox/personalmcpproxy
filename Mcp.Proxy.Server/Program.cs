@@ -7,16 +7,13 @@ using ModelContextProtocol.Server;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Named client avoids AOT reflection warnings from the generic AddHttpClient<T> overload.
-builder.Services.AddHttpClient("bfl", client =>
+var apiKey = builder.Configuration["BlackForestLabs:ApiKey"]
+    ?? throw new InvalidOperationException("BlackForestLabs:ApiKey is not configured.");
+builder.Services.AddHttpClient<BlackforestLabWrapper>(client =>
 {
     client.BaseAddress = new Uri("https://api.bfl.ai");
-    var apiKey = builder.Configuration["BlackForestLabs:ApiKey"]
-        ?? throw new InvalidOperationException("BlackForestLabs:ApiKey is not configured.");
     client.DefaultRequestHeaders.Add("x-key", apiKey);
 });
-builder.Services.AddTransient(sp =>
-    new BlackforestLabWrapper(sp.GetRequiredService<IHttpClientFactory>().CreateClient("bfl")));
 
 builder.Services.AddSingleton<OAuthService>();
 builder.Services.AddAuthentication(Constants.AuthenticationScheme)
