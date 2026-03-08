@@ -44,3 +44,11 @@ jobs:
           tags: |
             ixelbox/mcp-proxy-server:${{ steps.version.outputs.value }}
             ixelbox/mcp-proxy-server:latest
+
+      - name: Update Docker Hub description
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ixelbox
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ixelbox/mcp-proxy-server
+          readme-filepath: ./DOCKERHUB.md
