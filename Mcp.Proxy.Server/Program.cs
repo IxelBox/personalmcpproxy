@@ -28,6 +28,7 @@ builder.Services.Configure<SingleUserOAuthOptions>(Constants.AuthenticationSchem
 {
     opts.UserName = authSection["UserName"];
     opts.Password = authSection["Password"];
+    opts.TokenSigningKey = authSection["TokenSigningKey"];
 });
 
 builder.Services.AddAuthorization();

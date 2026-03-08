@@ -21,6 +21,7 @@ Connect your MCP client to `http://localhost:5000`.
 | `Authentication__Schemes__SingleUserOAuth__UserName` | Yes | Login username |
 | `Authentication__Schemes__SingleUserOAuth__Password` | Yes | Login password |
 | `BlackForestLabs__ApiKey` | Yes | BFL API key — get one at [api.bfl.ai](https://api.bfl.ai) |
+| `Authentication__Schemes__SingleUserOAuth__TokenSigningKey` | No | Secret for signing bearer tokens. Set this to keep tokens valid across restarts. |
 | `McpServer__Port` | No | HTTP port (default: `5000`) |
 
 ## Docker Compose
@@ -34,6 +35,7 @@ services:
     environment:
       Authentication__Schemes__SingleUserOAuth__UserName: alice
       Authentication__Schemes__SingleUserOAuth__Password: secret
+      Authentication__Schemes__SingleUserOAuth__TokenSigningKey: your-random-secret
       BlackForestLabs__ApiKey: your-bfl-api-key
     restart: unless-stopped
 ```

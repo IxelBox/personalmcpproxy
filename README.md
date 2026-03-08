@@ -21,6 +21,7 @@ Settings can be provided via `appsettings.json` or environment variables (use `_
 | `McpServer:Port` | `McpServer__Port` | — | HTTP port override |
 | `Authentication:Schemes:SingleUserOAuth:UserName` | `Authentication__Schemes__SingleUserOAuth__UserName` | — | Login username |
 | `Authentication:Schemes:SingleUserOAuth:Password` | `Authentication__Schemes__SingleUserOAuth__Password` | — | Login password |
+| `Authentication:Schemes:SingleUserOAuth:TokenSigningKey` | `Authentication__Schemes__SingleUserOAuth__TokenSigningKey` | random | Secret for signing bearer tokens. Set this to keep tokens valid across restarts. |
 | `BlackForestLabs:ApiKey` | `BlackForestLabs__ApiKey` | — | BFL API key (get one at [api.bfl.ai](https://api.bfl.ai)) |
 
 ### appsettings.json example
