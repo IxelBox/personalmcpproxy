@@ -5,8 +5,10 @@ using ModelContextProtocol.Server;
 
 namespace Mcp.Proxy.Server.Tools;
 
-public class BlackforestLabWrapper(HttpClient http)
+public class BlackforestLabWrapper(IHttpClientFactory factory)
 {
+    private readonly HttpClient http = factory.CreateClient("bfl");
+
     [McpServerTool]
     [Description("""
         Generate an image using a Black Forest Labs FLUX model. Returns the URL of the generated image.

@@ -7,11 +7,11 @@ using ModelContextProtocol.Server;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var apiKey = builder.Configuration["BlackForestLabs:ApiKey"]
-    ?? throw new InvalidOperationException("BlackForestLabs:ApiKey is not configured.");
-builder.Services.AddHttpClient<BlackforestLabWrapper>(client =>
+builder.Services.AddHttpClient("bfl", client =>
 {
     client.BaseAddress = new Uri("https://api.bfl.ai");
+    var apiKey = builder.Configuration["BlackForestLabs:ApiKey"]
+        ?? throw new InvalidOperationException("BlackForestLabs:ApiKey is not configured.");
     client.DefaultRequestHeaders.Add("x-key", apiKey);
 });
 
