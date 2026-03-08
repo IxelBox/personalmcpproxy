@@ -39,7 +39,7 @@ jobs:
       - name: Build & push
         uses: docker/build-push-action@v6
         with:
-          context: ./Mcp.Proxy.Server
+          context: .
           push: true
           tags: |
             ixelbox/mcp-proxy-server:${{ steps.version.outputs.value }}
