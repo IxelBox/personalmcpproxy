@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Mcp.Proxy.Server.Tests/Mcp.Proxy.Server.Tests.csproj" />
+  <Project Path="Mcp.Proxy.Server/Mcp.Proxy.Server.csproj" />
+</Solution>
