@@ -1,5 +1,6 @@
-# Build stage — Alpine SDK has the musl-compatible AOT toolchain (clang)
+# Build stage — Alpine SDK + clang/zlib for Native AOT
 FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
+RUN apk add --no-cache clang zlib-dev
 WORKDIR /src
 
 COPY Mcp.Proxy.Server/Mcp.Proxy.Server.csproj Mcp.Proxy.Server/
