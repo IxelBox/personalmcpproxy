@@ -21,6 +21,7 @@ Settings can be provided via `appsettings.json` or environment variables (use `_
 | `McpServer:Port` | `McpServer__Port` | — | HTTP port override |
 | `Authentication:Schemes:SingleUserOAuth:UserName` | `Authentication__Schemes__SingleUserOAuth__UserName` | — | Login username |
 | `Authentication:Schemes:SingleUserOAuth:Password` | `Authentication__Schemes__SingleUserOAuth__Password` | — | Login password |
+| `BlackForestLabs:ApiKey` | `BlackForestLabs__ApiKey` | — | BFL API key (get one at [api.bfl.ai](https://api.bfl.ai)) |
 
 ### appsettings.json example
 
@@ -37,6 +38,9 @@ Settings can be provided via `appsettings.json` or environment variables (use `_
         "Password": "secret"
       }
     }
+  },
+  "BlackForestLabs": {
+    "ApiKey": "your-bfl-api-key"
   }
 }
 ```
@@ -48,6 +52,15 @@ McpServer__Transport=Http
 McpServer__Port=5000
 Authentication__Schemes__SingleUserOAuth__UserName=alice
 Authentication__Schemes__SingleUserOAuth__Password=secret
+BlackForestLabs__ApiKey=your-bfl-api-key
+```
+
+### User secrets (recommended for local development)
+
+Keeps the API key out of source control:
+
+```bash
+dotnet user-secrets --project Mcp.Proxy.Server set "BlackForestLabs:ApiKey" "your-bfl-api-key"
 ```
 
 ## Running locally

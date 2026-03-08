@@ -1,10 +1,22 @@
 using Mcp.Proxy.Server;
 using Mcp.Proxy.Server.Authentication;
+using Mcp.Proxy.Server.Tools;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.HttpOverrides;
 using ModelContextProtocol.Server;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Named client avoids AOT reflection warnings from the generic AddHttpClient<T> overload.
+builder.Services.AddHttpClient("bfl", client =>
+{
+    client.BaseAddress = new Uri("https://api.bfl.ai");
+    var apiKey = builder.Configuration["BlackForestLabs:ApiKey"]
+        ?? throw new InvalidOperationException("BlackForestLabs:ApiKey is not configured.");
+    client.DefaultRequestHeaders.Add("x-key", apiKey);
+});
+builder.Services.AddTransient(sp =>
+    new BlackforestLabWrapper(sp.GetRequiredService<IHttpClientFactory>().CreateClient("bfl")));
 
 builder.Services.AddSingleton<OAuthService>();
 builder.Services.AddAuthentication(Constants.AuthenticationScheme)
@@ -27,7 +39,7 @@ var transport = mcpConfig.GetValue<string>("Transport")?.ToLowerInvariant() ?? "
 var port = mcpConfig.GetValue<int?>("Port");
 
 // Add the MCP services: the transport to use (http or console) and the tools to register.
-var services = builder.Services.AddMcpServer().WithTools<RandomNumberTools>();
+var services = builder.Services.AddMcpServer().WithTools<RandomNumberTools>().WithTools<BlackforestLabWrapper>();
 
 if (transport == "console")
 {

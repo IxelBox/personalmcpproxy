@@ -225,5 +225,4 @@ public class OAuthFlowTests : IClassFixture<OAuthFlowTests.AppFactory>
     {
         Assert.False(_oauthService.ValidateToken("not-a-real-token"));
     }
-
 }
