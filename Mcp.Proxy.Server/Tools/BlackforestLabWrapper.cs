@@ -10,22 +10,26 @@ public class BlackforestLabWrapper(IBflApiClient bfl)
     [Description("""
         Generate an image using a Black Forest Labs FLUX model. Returns the URL of the generated image.
         Choose model by use-case:
-          flux-2-pro-preview  — best overall quality, latest generation (default)
-          flux-2-max          — maximum detail and resolution
-          flux-pro-1.1-ultra  — ultra-high resolution, photorealism
-          flux-pro-1.1        — fast, high quality
-          flux-dev            — open model, good for experimentation
-        """)]
+          flux-2-pro-preview  — latest FLUX.2 [pro], best overall quality (default, recommended)
+          flux-2-flex         — FLUX.2 [flex], customizable generation and editing
+          flux-kontext-pro    — FLUX.1 Kontext [pro], context-aware generation and editing
+          flux-kontext-max    — FLUX.1 Kontext [max], advanced context editing
+          flux-pro-1.1-ultra  — FLUX1.1 [pro] Ultra, maximum quality up to 4MP
+          flux-pro-1.1        — FLUX1.1 [pro], fast high-quality generation
+""")]
     public async Task<string> GenerateImage(
         [Description("""
-            Text prompt using Subject → Style → Context framework. Front-load the most important elements.
-            Ideal length: 30–80 words. Use positive language — describe what you want, not what to avoid.
-            Build progressively: core subject first, then visual style, then technical details, then atmosphere.
-            Example: "Red fox sitting in tall grass, wildlife documentary photography, misty dawn, shallow depth of field"
+            Text prompt following the Subject + Action + Style + Context framework.
+            Word order matters: front-load the most important elements — FLUX weighs earlier words more.
+            Ideal length: 30-80 words. For complex scenes 80+ words is fine.
+            Use positive language — describe what should appear, not what to exclude (e.g. "peaceful solitude" not "no crowds").
+            Build in layers: (1) subject + action, (2) lighting + color + composition, (3) camera/lens details, (4) mood + atmosphere.
+            For text in the image: use quotation marks, specify placement, and describe the typographic style.
+            Example: "Red fox sitting in tall grass, wildlife documentary photography, golden hour, 85mm f/2.8, misty dawn atmosphere"
             """)] string prompt,
         [Description("Model to use. See tool description for guidance. Default: flux-2-pro-preview")] string model = "flux-2-pro-preview",
         [Description("Output format: jpeg (smaller, faster) or png (lossless). Default: jpeg")] string outputFormat = "jpeg",
-        [Description("Safety tolerance 0–6: 0–2 = strict filtering, 3–4 = balanced, 5–6 = permissive. Default: 2")] int safetyTolerance = 2,
+        [Description("Safety tolerance 0-6: 0-2 = strict filtering, 3-4 = balanced, 5-6 = permissive. Default: 6")] int safetyTolerance = 6,
         [Description("Seed for reproducible results. Same seed + prompt = same image.")] int? seed = null,
         CancellationToken ct = default)
     {

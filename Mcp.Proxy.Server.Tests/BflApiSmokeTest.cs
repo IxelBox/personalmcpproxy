@@ -30,7 +30,7 @@ public class BflApiSmokeTest(ITestOutputHelper output)
         output.WriteLine("Submitting job (flux-dev)...");
         var result = await wrapper.GenerateImage(
             prompt: "a red apple on a white background",
-            model: "flux-dev");
+            model: "flux-pro-1.1");
 
         Assert.False(result.StartsWith("Generation failed"), result);
         Assert.False(result.StartsWith("Request moderated"), result);
