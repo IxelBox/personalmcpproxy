@@ -7,7 +7,7 @@ using ModelContextProtocol.Server;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddHttpClient("bfl", client =>
+builder.Services.AddHttpClient<IBflApiClient, BflApiClient>(client =>
 {
     client.BaseAddress = new Uri("https://api.bfl.ai");
     var apiKey = builder.Configuration["BlackForestLabs:ApiKey"]

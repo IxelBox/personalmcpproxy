@@ -1,14 +1,11 @@
 using System.ComponentModel;
-using System.Text;
 using System.Text.Json.Nodes;
 using ModelContextProtocol.Server;
 
 namespace Mcp.Proxy.Server.Tools;
 
-public class BlackforestLabWrapper(IHttpClientFactory factory)
+public class BlackforestLabWrapper(IBflApiClient bfl)
 {
-    private readonly HttpClient http = factory.CreateClient("bfl");
-
     [McpServerTool]
     [Description("""
         Generate an image using a Black Forest Labs FLUX model. Returns the URL of the generated image.
@@ -40,12 +37,7 @@ public class BlackforestLabWrapper(IHttpClientFactory factory)
         };
         if (seed.HasValue) body["seed"] = seed.Value;
 
-        var submit = await http.PostAsync($"/v1/{model}", ToJsonContent(body), ct);
-        submit.EnsureSuccessStatusCode();
-
-        var submitJson = JsonNode.Parse(await submit.Content.ReadAsStringAsync(ct))!;
-        var id = submitJson["id"]!.GetValue<string>();
-
+        var id = await bfl.SubmitJobAsync($"/v1/{model}", body, ct);
         return await PollForResult(id, ct);
     }
 
@@ -71,23 +63,14 @@ public class BlackforestLabWrapper(IHttpClientFactory factory)
         };
         if (maskBase64 is not null) body["mask"] = maskBase64;
 
-        var submit = await http.PostAsync("/v1/flux-pro-1.0-fill", ToJsonContent(body), ct);
-        submit.EnsureSuccessStatusCode();
-
-        var submitJson = JsonNode.Parse(await submit.Content.ReadAsStringAsync(ct))!;
-        var id = submitJson["id"]!.GetValue<string>();
-
+        var id = await bfl.SubmitJobAsync("/v1/flux-pro-1.0-fill", body, ct);
         return await PollForResult(id, ct);
     }
 
     [McpServerTool]
     [Description("Get the current BFL credit balance for the configured API key.")]
-    public async Task<string> GetBflCredits(CancellationToken ct = default)
-    {
-        var response = await http.GetAsync("/v1/credits", ct);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadAsStringAsync(ct);
-    }
+    public async Task<string> GetBflCredits(CancellationToken ct = default) =>
+        await bfl.GetCreditsAsync(ct);
 
     // ---
 
@@ -98,10 +81,7 @@ public class BlackforestLabWrapper(IHttpClientFactory factory)
         {
             await Task.Delay(2000, ct);
 
-            var poll = await http.GetAsync($"/v1/get_result?id={id}", ct);
-            poll.EnsureSuccessStatusCode();
-
-            var json = JsonNode.Parse(await poll.Content.ReadAsStringAsync(ct))!;
+            var json = await bfl.GetResultAsync(id, ct);
             var status = json["status"]!.GetValue<string>();
 
             switch (status)
@@ -119,7 +99,4 @@ public class BlackforestLabWrapper(IHttpClientFactory factory)
 
         return "Timed out waiting for generation result.";
     }
-
-    private static StringContent ToJsonContent(JsonObject obj) =>
-        new(obj.ToJsonString(), Encoding.UTF8, "application/json");
 }
