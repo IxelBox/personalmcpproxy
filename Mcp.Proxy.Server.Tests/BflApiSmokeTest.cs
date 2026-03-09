@@ -1,11 +1,10 @@
-using System.Net.Http.Json;
-using System.Text.Json.Nodes;
+using Mcp.Proxy.Server.Tools;
 
 namespace Mcp.Proxy.Server.Tests;
 
 /// <summary>
-/// Live smoke tests against the real BFL API.
-/// Set MCPPROXYAPP_BFL_API_KEY to run the API tests; otherwise they are skipped automatically.
+/// Live smoke tests — calls BlackforestLabWrapper directly, same code path as the MCP tool.
+/// Set MCPPROXYAPP_BFL_API_KEY to run; otherwise tests are shown as Skipped.
 ///   $env:MCPPROXYAPP_BFL_API_KEY = "your-key"
 ///   dotnet test --filter "BflApiSmokeTest"
 /// </summary>
@@ -13,60 +12,41 @@ public class BflApiSmokeTest
 {
     private const string EnvVar = "MCPPROXYAPP_BFL_API_KEY";
     private static readonly string? ApiKey = Environment.GetEnvironmentVariable(EnvVar);
-    private static readonly HttpClient Http = new() { BaseAddress = new Uri("https://api.bfl.ai") };
+
+    private static BlackforestLabWrapper MakeWrapper()
+    {
+        var http = new HttpClient { BaseAddress = new Uri("https://api.bfl.ai") };
+        http.DefaultRequestHeaders.Add("x-key", ApiKey);
+        return new BlackforestLabWrapper(new SingleClientFactory(http));
+    }
+
+    // Minimal IHttpClientFactory stub that returns one pre-configured client.
+    private sealed class SingleClientFactory(HttpClient client) : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => client;
+    }
 
     [FactWhenEnv(EnvVar)]
     public async Task Credits_ReturnsBalance()
     {
-        Http.DefaultRequestHeaders.Remove("x-key");
-        Http.DefaultRequestHeaders.Add("x-key", ApiKey);
+        var wrapper = MakeWrapper();
+        var result = await wrapper.GetBflCredits();
 
-        var response = await Http.GetAsync("/v1/credits");
-        var body = await response.Content.ReadAsStringAsync();
-
-        Assert.True(response.IsSuccessStatusCode, $"HTTP {(int)response.StatusCode}: {body}");
-        Console.WriteLine("BFL credits response: " + body);
+        Assert.False(string.IsNullOrWhiteSpace(result));
+        Console.WriteLine("BFL credits: " + result);
     }
 
     [FactWhenEnv(EnvVar)]
     public async Task GenerateImage_ReturnsResultUrl()
     {
-        Http.DefaultRequestHeaders.Remove("x-key");
-        Http.DefaultRequestHeaders.Add("x-key", ApiKey);
+        var wrapper = MakeWrapper();
+        var result = await wrapper.GenerateImage(
+            prompt: "a red apple on a wooden table, product photography");
 
-        // 1. Submit
-        var submitBody = new JsonObject
-        {
-            ["prompt"] = "a red apple on a wooden table, product photography",
-            ["output_format"] = "jpeg",
-            ["safety_tolerance"] = 2,
-        };
-        var submit = await Http.PostAsJsonAsync("/v1/flux-pro-1.1", submitBody);
-        var submitRaw = await submit.Content.ReadAsStringAsync();
-        Assert.True(submit.IsSuccessStatusCode, $"Submit HTTP {(int)submit.StatusCode}: {submitRaw}");
-
-        var id = JsonNode.Parse(submitRaw)!["id"]!.GetValue<string>();
-        Console.WriteLine("Job id: " + id);
-
-        // 2. Poll
-        var deadline = DateTime.UtcNow.AddSeconds(120);
-        while (DateTime.UtcNow < deadline)
-        {
-            await Task.Delay(3000);
-            var poll = await Http.GetAsync($"/v1/get_result?id={id}");
-            var pollRaw = await poll.Content.ReadAsStringAsync();
-            Console.WriteLine("Poll response: " + pollRaw);
-
-            var status = JsonNode.Parse(pollRaw)!["status"]?.GetValue<string>();
-            if (status == "Ready")
-            {
-                Assert.Contains("sample", pollRaw);
-                return;
-            }
-            if (status is "Error" or "Content Moderated" or "Request Moderated")
-                Assert.Fail($"BFL returned status '{status}': {pollRaw}");
-        }
-        Assert.Fail("Timed out waiting for BFL result");
+        Console.WriteLine("GenerateImage result: " + result);
+        Assert.False(result.StartsWith("Generation failed"), result);
+        Assert.False(result.StartsWith("Request moderated"), result);
+        Assert.False(result.StartsWith("Timed out"), result);
+        Assert.Contains("sample", result);
     }
-
 }
