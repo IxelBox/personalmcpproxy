@@ -31,9 +31,8 @@ public class BflApiSmokeTest(ITestOutputHelper output)
             prompt: "a red apple on a white background",
             model: "flux-pro-1.1");
 
-        Assert.True(result.DecodedData.Length > 0, "Expected non-empty image data in result");
-        Assert.Equal("image/jpeg", result.MimeType);
+        Assert.False(string.IsNullOrWhiteSpace(result), "Expected non-empty base64 image data");
 
-        output.WriteLine($"Received image: {result.MimeType}, {result.DecodedData.Length} bytes");
+        output.WriteLine($"Received base64 image: {result.Length} chars");
     }
 }

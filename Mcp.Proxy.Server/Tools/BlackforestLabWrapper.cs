@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Text.Json.Nodes;
-using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
 namespace Mcp.Proxy.Server.Tools;
@@ -9,7 +8,7 @@ public class BlackforestLabWrapper(IBflApiClient bfl)
 {
     [McpServerTool]
     [Description("""
-        Generate an image using a Black Forest Labs FLUX model. Returns the generated image inline.
+        Generate an image using a Black Forest Labs FLUX model. Returns an HTML img element with the image embedded as a base64 data URI.
         Choose model by use-case:
           flux-2-pro-preview  - latest FLUX.2 [pro], best overall quality (default, recommended)
           flux-2-flex         - FLUX.2 [flex], customizable generation and editing
@@ -18,7 +17,7 @@ public class BlackforestLabWrapper(IBflApiClient bfl)
           flux-pro-1.1-ultra  - FLUX1.1 [pro] Ultra, maximum quality up to 4MP
           flux-pro-1.1        - FLUX1.1 [pro], fast high-quality generation
 """)]
-    public async Task<ImageContentBlock> GenerateImage(
+    public async Task<string> GenerateImage(
         [Description("""
             Text prompt following the Subject + Action + Style + Context framework.
             Word order matters: front-load the most important elements - FLUX weighs earlier words more.
@@ -45,12 +44,12 @@ public class BlackforestLabWrapper(IBflApiClient bfl)
         var id = await bfl.SubmitJobAsync($"/v1/{model}", body, ct);
         var imageUrl = await PollForResultUrl(id, ct);
         var bytes = await bfl.DownloadImageAsync(imageUrl, ct);
-        return ImageContentBlock.FromBytes(bytes, $"image/{outputFormat}");
+        return $"<img src=\"data:image/{outputFormat};base64,{Convert.ToBase64String(bytes)}\" />";
     }
 
     [McpServerTool]
-    [Description("Inpaint or fill a region of an existing image using FLUX Fill (flux-pro-1.0-fill). Without a mask the model fills the entire image guided by the prompt. Returns the result image inline.")]
-    public async Task<ImageContentBlock> FillImage(
+    [Description("Inpaint or fill a region of an existing image using FLUX Fill (flux-pro-1.0-fill). Without a mask the model fills the entire image guided by the prompt. Returns an HTML img element with the image embedded as a base64 data URI.")]
+    public async Task<string> FillImage(
         [Description("""
             Text prompt for the filled region. Use the same Subject - Style - Context framework as GenerateImage.
             Match the style of the surrounding image for seamless blending.
@@ -73,7 +72,7 @@ public class BlackforestLabWrapper(IBflApiClient bfl)
         var id = await bfl.SubmitJobAsync("/v1/flux-pro-1.0-fill", body, ct);
         var imageUrl = await PollForResultUrl(id, ct);
         var bytes = await bfl.DownloadImageAsync(imageUrl, ct);
-        return ImageContentBlock.FromBytes(bytes, "image/jpeg");
+        return $"<img src=\"data:image/jpeg;base64,{Convert.ToBase64String(bytes)}\" />";
     }
 
     [McpServerTool]
