@@ -1,5 +1,6 @@
 # Build stage — Alpine SDK + clang/zlib for Native AOT
 FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
+ARG VERSION=0.0.0-local
 RUN apk add --no-cache clang zlib-dev
 WORKDIR /src
 
@@ -11,7 +12,8 @@ RUN dotnet publish Mcp.Proxy.Server/Mcp.Proxy.Server.csproj \
     -r linux-musl-x64 \
     -c Release \
     -o /app/publish \
-    --no-restore
+    --no-restore \
+    /p:MinVerVersionOverride=$VERSION
 
 # Runtime stage — plain Alpine; AOT+musl binary only needs musl libc (built-in) + ca-certificates
 FROM alpine:3.21

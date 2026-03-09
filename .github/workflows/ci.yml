@@ -41,6 +41,7 @@ jobs:
         with:
           context: .
           push: true
+          build-args: VERSION=${{ steps.version.outputs.value }}
           tags: |
             ixelbox/mcp-proxy-server:${{ steps.version.outputs.value }}
             ixelbox/mcp-proxy-server:latest
