@@ -16,6 +16,8 @@ builder.Services.AddHttpClient<IBflApiClient, BflApiClient>(client =>
 });
 
 builder.Services.AddSingleton<OAuthService>();
+builder.Services.AddSingleton<ImageStore>();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddAuthentication(Constants.AuthenticationScheme)
     .AddScheme<SingleUserOAuthOptions, SingleUserOAuthHandler>(Constants.AuthenticationScheme, null);
 
@@ -71,6 +73,12 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapOAuthEndpoints();
+app.MapGet("/images/{id}", (string id, ImageStore store) =>
+{
+    var entry = store.Get(id);
+    if (entry is null) return Results.NotFound();
+    return Results.File(entry.Value.Bytes, entry.Value.MimeType);
+}).AllowAnonymous();
 app.MapMcp().RequireAuthorization();
 
 app.Run();

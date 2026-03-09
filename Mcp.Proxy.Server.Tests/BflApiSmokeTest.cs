@@ -1,4 +1,6 @@
 using Mcp.Proxy.Server.Tools;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Xunit.Abstractions;
 
 namespace Mcp.Proxy.Server.Tests;
@@ -18,7 +20,14 @@ public class BflApiSmokeTest(ITestOutputHelper output)
     {
         var http = new HttpClient { BaseAddress = new Uri("https://api.bfl.ai") };
         http.DefaultRequestHeaders.Add("x-key", ApiKey);
-        return new BlackforestLabWrapper(new BflApiClient(http));
+
+        var ctx = new DefaultHttpContext();
+        ctx.Request.Scheme = "https";
+        ctx.Request.Host = new HostString("localhost");
+        var accessor = new HttpContextAccessor { HttpContext = ctx };
+
+        var config = new ConfigurationBuilder().Build();
+        return new BlackforestLabWrapper(new BflApiClient(http), new ImageStore(), accessor, config);
     }
 
     [FactWhenEnv(EnvVar)]
@@ -31,8 +40,8 @@ public class BflApiSmokeTest(ITestOutputHelper output)
             prompt: "a red apple on a white background",
             model: "flux-pro-1.1");
 
-        Assert.False(string.IsNullOrWhiteSpace(result), "Expected non-empty base64 image data");
+        Assert.StartsWith("https://", result);
 
-        output.WriteLine($"Received base64 image: {result.Length} chars");
+        output.WriteLine($"Image URL: {result}");
     }
 }

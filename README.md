@@ -19,6 +19,7 @@ Settings can be provided via `appsettings.json` or environment variables (use `_
 | --- | --- | --- | --- |
 | `McpServer:Transport` | `McpServer__Transport` | `Http` | `Http` or `Console` (stdio) |
 | `McpServer:Port` | `McpServer__Port` | — | HTTP port override |
+| `McpServer:ImageTtlMinutes` | `McpServer__ImageTtlMinutes` | `60` | How long generated images are cached server-side (minutes) |
 | `Authentication:Schemes:SingleUserOAuth:UserName` | `Authentication__Schemes__SingleUserOAuth__UserName` | — | Login username |
 | `Authentication:Schemes:SingleUserOAuth:Password` | `Authentication__Schemes__SingleUserOAuth__Password` | — | Login password |
 | `Authentication:Schemes:SingleUserOAuth:TokenSigningKey` | `Authentication__Schemes__SingleUserOAuth__TokenSigningKey` | random | Secret for signing bearer tokens. Set this to keep tokens valid across restarts. |
@@ -30,7 +31,8 @@ Settings can be provided via `appsettings.json` or environment variables (use `_
 {
   "McpServer": {
     "Transport": "Http",
-    "Port": 5000
+    "Port": 5000,
+    "ImageTtlMinutes": 60
   },
   "Authentication": {
     "Schemes": {
@@ -51,6 +53,7 @@ Settings can be provided via `appsettings.json` or environment variables (use `_
 ```bash
 McpServer__Transport=Http
 McpServer__Port=5000
+McpServer__ImageTtlMinutes=60
 Authentication__Schemes__SingleUserOAuth__UserName=alice
 Authentication__Schemes__SingleUserOAuth__Password=secret
 BlackForestLabs__ApiKey=your-bfl-api-key
