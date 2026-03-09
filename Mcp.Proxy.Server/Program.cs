@@ -37,7 +37,7 @@ var transport = mcpConfig.GetValue<string>("Transport")?.ToLowerInvariant() ?? "
 var port = mcpConfig.GetValue<int?>("Port");
 
 // Add the MCP services: the transport to use (http or console) and the tools to register.
-var services = builder.Services.AddMcpServer().WithTools<RandomNumberTools>().WithTools<BlackforestLabWrapper>();
+var services = builder.Services.AddMcpServer().WithTools<RandomNumberTools>().WithTools<BlackforestLabWrapper>().WithTools<ServerInfoTools>();
 
 if (transport == "console")
 {

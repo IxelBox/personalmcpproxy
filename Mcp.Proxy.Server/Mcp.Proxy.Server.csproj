@@ -20,7 +20,29 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
+  <!-- MinVer reads the nearest git tag (e.g. v0.1.3) and sets $(InformationalVersion) -->
+  <PropertyGroup>
+    <MinVerTagPrefix>v</MinVerTagPrefix>
+  </PropertyGroup>
+
+  <!-- Generate a compile-time constant (AOT-safe, no reflection needed) -->
+  <Target Name="GenerateBuildInfo" DependsOnTargets="MinVer" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <_BuildInfoContent>namespace Mcp.Proxy.Server%3B%0Ainternal static class BuildInfo%0A{%0A    public const string Version = "$(InformationalVersion)"%3B%0A}</_BuildInfoContent>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(IntermediateOutputPath)BuildInfo.g.cs"
+                      Lines="$(_BuildInfoContent)"
+                      Overwrite="true" />
+    <ItemGroup>
+      <Compile Include="$(IntermediateOutputPath)BuildInfo.g.cs" />
+    </ItemGroup>
+  </Target>
+
   <ItemGroup>
+    <PackageReference Include="MinVer" Version="7.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="1.1.0" />
     <PackageReference Include="ModelContextProtocol.Core" Version="1.1.0" />
   </ItemGroup>
