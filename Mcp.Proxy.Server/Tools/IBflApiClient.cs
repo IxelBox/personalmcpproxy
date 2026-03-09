@@ -16,4 +16,7 @@ public interface IBflApiClient
 
     /// <summary>Returns the raw JSON credit-balance response.</summary>
     Task<string> GetCreditsAsync(CancellationToken ct = default);
+
+    /// <summary>Downloads image bytes from a URL (CDN URL returned by BFL result).</summary>
+    Task<byte[]> DownloadImageAsync(string url, CancellationToken ct = default);
 }

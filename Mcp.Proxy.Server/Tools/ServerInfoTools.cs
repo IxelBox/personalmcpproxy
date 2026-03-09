@@ -3,7 +3,7 @@ using ModelContextProtocol.Server;
 
 namespace Mcp.Proxy.Server.Tools;
 
-public class ServerInfoTools
+internal class ServerInfoTools
 {
     [McpServerTool]
     [Description("Returns the current server version.")]

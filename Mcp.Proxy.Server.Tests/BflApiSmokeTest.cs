@@ -1,11 +1,10 @@
-using System.Text.Json.Nodes;
 using Mcp.Proxy.Server.Tools;
 using Xunit.Abstractions;
 
 namespace Mcp.Proxy.Server.Tests;
 
 /// <summary>
-/// Live smoke test — calls BflApiClient directly to verify the API key and connectivity.
+/// Live smoke test -- calls BflApiClient directly to verify the API key and connectivity.
 /// Set MCPPROXYAPP_BFL_API_KEY to run; otherwise the test is shown as Skipped.
 ///   PowerShell:  $env:MCPPROXYAPP_BFL_API_KEY="your-key"; dotnet test --filter "BflApiSmokeTest"
 ///   Bash:        MCPPROXYAPP_BFL_API_KEY="your-key" dotnet test --filter "BflApiSmokeTest"
@@ -23,25 +22,18 @@ public class BflApiSmokeTest(ITestOutputHelper output)
     }
 
     [FactWhenEnv(EnvVar)]
-    public async Task GenerateImage_FluxDev_ReturnsImageUrl()
+    public async Task GenerateImage_FluxPro_ReturnsImageBytes()
     {
         var wrapper = MakeWrapper();
 
-        output.WriteLine("Submitting job (flux-dev)...");
+        output.WriteLine("Submitting job (flux-pro-1.1)...");
         var result = await wrapper.GenerateImage(
             prompt: "a red apple on a white background",
             model: "flux-pro-1.1");
 
-        Assert.False(result.StartsWith("Generation failed"), result);
-        Assert.False(result.StartsWith("Request moderated"), result);
-        Assert.False(result.StartsWith("Timed out"), result);
+        Assert.True(result.DecodedData.Length > 0, "Expected non-empty image data in result");
+        Assert.Equal("image/jpeg", result.MimeType);
 
-        var json = JsonNode.Parse(result);
-        var imageUrl = json?["sample"]?.GetValue<string>();
-
-        Assert.False(string.IsNullOrWhiteSpace(imageUrl), $"Expected 'sample' URL in result: {result}");
-        Assert.StartsWith("https://", imageUrl);
-
-        output.WriteLine("Image URL: " + imageUrl);
+        output.WriteLine($"Received image: {result.MimeType}, {result.DecodedData.Length} bytes");
     }
 }

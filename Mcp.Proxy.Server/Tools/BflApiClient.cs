@@ -60,6 +60,13 @@ public sealed class BflApiClient(HttpClient http) : IBflApiClient
         return raw;
     }
 
+    public async Task<byte[]> DownloadImageAsync(string url, CancellationToken ct = default)
+    {
+        var response = await http.GetAsync(url, ct);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsByteArrayAsync(ct);
+    }
+
     private static StringContent ToJsonContent(JsonObject obj) =>
         new(obj.ToJsonString(), Encoding.UTF8, "application/json");
 }
