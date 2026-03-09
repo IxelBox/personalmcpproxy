@@ -54,8 +54,8 @@ public class BlackforestLabWrapper(IBflApiClient bfl)
             """)] string prompt,
         [Description("Base64-encoded input image (JPEG or PNG).")] string imageBase64,
         [Description("Base64-encoded mask image. White pixels = area to fill, black pixels = keep unchanged. Omit to restyle the whole image.")] string? maskBase64 = null,
-        [Description("Guidance strength (1.5–100). Low (5–15) = preserves original style, high (30–70) = follows prompt closely. Default: 30")] float guidance = 30f,
-        [Description("Diffusion steps (1–50). More steps = higher quality but slower. 20–30 is a good balance. Default: 28")] int steps = 28,
+        [Description("Guidance strength (1.5-100). Low (5-15) = preserves original style, high (30-70) = follows prompt closely. Default: 30")] float guidance = 30f,
+        [Description("Diffusion steps (1-50). More steps = higher quality but slower. 20-30 is a good balance. Default: 28")] int steps = 28,
         CancellationToken ct = default)
     {
         var body = new JsonObject
