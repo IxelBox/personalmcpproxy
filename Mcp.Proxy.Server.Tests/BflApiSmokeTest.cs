@@ -1,4 +1,6 @@
+using System.Text.Json.Nodes;
 using Mcp.Proxy.Server.Tools;
+using Xunit.Abstractions;
 
 namespace Mcp.Proxy.Server.Tests;
 
@@ -8,26 +10,38 @@ namespace Mcp.Proxy.Server.Tests;
 ///   PowerShell:  $env:MCPPROXYAPP_BFL_API_KEY="your-key"; dotnet test --filter "BflApiSmokeTest"
 ///   Bash:        MCPPROXYAPP_BFL_API_KEY="your-key" dotnet test --filter "BflApiSmokeTest"
 /// </summary>
-public class BflApiSmokeTest
+public class BflApiSmokeTest(ITestOutputHelper output)
 {
     private const string EnvVar = "MCPPROXYAPP_BFL_API_KEY";
     private static readonly string? ApiKey = Environment.GetEnvironmentVariable(EnvVar);
 
-    private static BflApiClient MakeClient()
+    private static BlackforestLabWrapper MakeWrapper()
     {
         var http = new HttpClient { BaseAddress = new Uri("https://api.bfl.ai") };
         http.DefaultRequestHeaders.Add("x-key", ApiKey);
-        return new BflApiClient(http);
+        return new BlackforestLabWrapper(new BflApiClient(http));
     }
 
     [FactWhenEnv(EnvVar)]
-    public async Task GetCredits_ReturnsBalance()
+    public async Task GenerateImage_FluxDev_ReturnsImageUrl()
     {
-        var client = MakeClient();
+        var wrapper = MakeWrapper();
 
-        var result = await client.GetCreditsAsync();
+        output.WriteLine("Submitting job (flux-dev)...");
+        var result = await wrapper.GenerateImage(
+            prompt: "a red apple on a white background",
+            model: "flux-dev");
 
-        Assert.False(string.IsNullOrWhiteSpace(result), "Expected non-empty JSON from /v1/credits");
-        Console.WriteLine("BFL credits: " + result);
+        Assert.False(result.StartsWith("Generation failed"), result);
+        Assert.False(result.StartsWith("Request moderated"), result);
+        Assert.False(result.StartsWith("Timed out"), result);
+
+        var json = JsonNode.Parse(result);
+        var imageUrl = json?["sample"]?.GetValue<string>();
+
+        Assert.False(string.IsNullOrWhiteSpace(imageUrl), $"Expected 'sample' URL in result: {result}");
+        Assert.StartsWith("https://", imageUrl);
+
+        output.WriteLine("Image URL: " + imageUrl);
     }
 }

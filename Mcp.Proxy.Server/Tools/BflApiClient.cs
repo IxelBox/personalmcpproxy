@@ -32,6 +32,10 @@ public sealed class BflApiClient(HttpClient http) : IBflApiClient
         var response = await http.GetAsync($"/v1/get_result?id={jobId}", ct);
         var raw = await response.Content.ReadAsStringAsync(ct);
 
+        // 404 means the task hasn't been registered yet — treat as Pending
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            return new JsonObject { ["status"] = "Pending" };
+
         if (!response.IsSuccessStatusCode)
             throw new HttpRequestException(
                 $"BFL get_result failed ({(int)response.StatusCode} {response.ReasonPhrase}): {raw}",
