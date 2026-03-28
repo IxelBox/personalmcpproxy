@@ -54,4 +54,36 @@ public class ImageStoreTests : IDisposable
         // Verify directly that the entry is gone without going through Get (which also purges on access)
         Assert.Null(_store.Get(id));
     }
+
+    [Fact]
+    public void Store_WithExplicitKey_UsesProvidedKey()
+    {
+        var id = _store.Store([1, 2, 3], "image/jpeg", TimeSpan.FromMinutes(1), key: "my-key");
+        Assert.Equal("my-key", id);
+    }
+
+    [Fact]
+    public void Store_WithExplicitKey_IsRetrievableByThatKey()
+    {
+        byte[] bytes = [7, 8, 9];
+        _store.Store(bytes, "image/png", TimeSpan.FromMinutes(1), key: "reuse-key");
+
+        var result = _store.Get("reuse-key");
+
+        Assert.NotNull(result);
+        Assert.Equal(bytes, result.Value.Bytes);
+    }
+
+    [Fact]
+    public void Store_WithExplicitKey_OverwritesPreviousEntry()
+    {
+        _store.Store([1, 2, 3], "image/jpeg", TimeSpan.FromMinutes(1), key: "k");
+        byte[] newBytes = [9, 8, 7];
+        _store.Store(newBytes, "image/png", TimeSpan.FromMinutes(1), key: "k");
+
+        var result = _store.Get("k");
+
+        Assert.Equal(newBytes, result!.Value.Bytes);
+        Assert.Equal("image/png", result.Value.MimeType);
+    }
 }

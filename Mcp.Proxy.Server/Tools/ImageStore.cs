@@ -17,9 +17,9 @@ public sealed class ImageStore : IDisposable
         _cleanup = new Timer(_ => RemoveExpired(), null, interval, interval);
     }
 
-    public string Store(byte[] bytes, string mimeType, TimeSpan ttl)
+    public string Store(byte[] bytes, string mimeType, TimeSpan ttl, string? key = null)
     {
-        var id = Guid.NewGuid().ToString("N");
+        var id = key ?? Guid.NewGuid().ToString("N");
         _store[id] = new Entry(bytes, mimeType, DateTime.UtcNow.Add(ttl));
         return id;
     }

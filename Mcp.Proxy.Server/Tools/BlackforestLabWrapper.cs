@@ -44,8 +44,14 @@ public class BlackforestLabWrapper(IBflApiClient bfl, ImageStore imageStore, IHt
         [Description("Image height in pixels. FLUX.2 models only. Must be a multiple of 16. Combined with width must not exceed 4MP. Omit for model default.")] int? height = null,
         [Description("Aspect ratio for Kontext models (e.g. \"16:9\", \"1:1\", \"4:3\", \"9:16\"). Range: 3:7 to 7:3. Omit for model default (1:1).")] string? aspectRatio = null,
         [Description("Return an HTML <img> tag instead of a plain URL. Default: true")] bool returnHtmlTag = true,
+        [Description("Return the image as base64 instead of a server URL. Combined with returnHtmlTag: embeds as data URI in <img>; without: returns raw base64. Default: false")] bool returnBase64 = false,
+        [Description("Optional cache key. If an image with this key is already cached on the server, it is returned immediately without calling the API. Omit to always generate a fresh image.")] string? cacheKey = null,
         CancellationToken ct = default)
     {
+        var mimeType = $"image/{outputFormat}";
+        if (cacheKey is not null && imageStore.Get(cacheKey) is var cached and not null)
+            return BuildResult(cacheKey, cached.Value.Bytes, cached.Value.MimeType, returnHtmlTag, returnBase64);
+
         var body = new JsonObject
         {
             ["prompt"] = prompt,
@@ -60,7 +66,8 @@ public class BlackforestLabWrapper(IBflApiClient bfl, ImageStore imageStore, IHt
         var id = await bfl.SubmitJobAsync($"/v1/{model}", body, ct);
         var imageUrl = await PollForResultUrl(id, ct);
         var bytes = await bfl.DownloadImageAsync(imageUrl, ct);
-        return BuildResult(imageStore.Store(bytes, $"image/{outputFormat}", ImageTtl), returnHtmlTag);
+        var imageId = (!returnBase64 || cacheKey is not null) ? imageStore.Store(bytes, mimeType, ImageTtl, cacheKey) : null;
+        return BuildResult(imageId, bytes, mimeType, returnHtmlTag, returnBase64);
     }
 
     [McpServerTool]
@@ -91,8 +98,14 @@ public class BlackforestLabWrapper(IBflApiClient bfl, ImageStore imageStore, IHt
         [Description("Image height in pixels. FLUX.2 models only. Must be multiple of 16, up to 4MP total. Omit for model default.")] int? height = null,
         [Description("Aspect ratio for Kontext models (e.g. \"16:9\", \"1:1\"). Omit for model default.")] string? aspectRatio = null,
         [Description("Return an HTML <img> tag instead of a plain URL. Default: true")] bool returnHtmlTag = true,
+        [Description("Return the image as base64 instead of a server URL. Combined with returnHtmlTag: embeds as data URI in <img>; without: returns raw base64. Default: false")] bool returnBase64 = false,
+        [Description("Optional cache key. If an image with this key is already cached on the server, it is returned immediately without calling the API. Omit to always generate a fresh image.")] string? cacheKey = null,
         CancellationToken ct = default)
     {
+        var mimeType = $"image/{outputFormat}";
+        if (cacheKey is not null && imageStore.Get(cacheKey) is var cached and not null)
+            return BuildResult(cacheKey, cached.Value.Bytes, cached.Value.MimeType, returnHtmlTag, returnBase64);
+
         var body = new JsonObject
         {
             ["prompt"] = prompt,
@@ -108,23 +121,30 @@ public class BlackforestLabWrapper(IBflApiClient bfl, ImageStore imageStore, IHt
         var id = await bfl.SubmitJobAsync($"/v1/{model}", body, ct);
         var imageUrl = await PollForResultUrl(id, ct);
         var bytes = await bfl.DownloadImageAsync(imageUrl, ct);
-        return BuildResult(imageStore.Store(bytes, $"image/{outputFormat}", ImageTtl), returnHtmlTag);
+        var imageId = (!returnBase64 || cacheKey is not null) ? imageStore.Store(bytes, mimeType, ImageTtl, cacheKey) : null;
+        return BuildResult(imageId, bytes, mimeType, returnHtmlTag, returnBase64);
     }
 
     [McpServerTool]
-    [Description("Inpaint or fill a region of an existing image using FLUX Fill (flux-pro-1.0-fill). Without a mask the model fills the entire image guided by the prompt. Returns a URL to the result image served from this server (expires in 30 minutes).")]
+    [Description("Inpaint or fill a region of an existing image using FLUX Fill (flux-pro-1.0-fill). A mask is required — white pixels = area to fill, black pixels = keep unchanged. To restyle the whole image use an all-white mask. Returns a URL to the result image served from this server (expires in 30 minutes).")]
     public async Task<string> FillImage(
         [Description("""
             Text prompt for the filled region. Use the same Subject - Style - Context framework as GenerateImage.
             Match the style of the surrounding image for seamless blending.
             """)] string prompt,
         [Description("Base64-encoded input image (JPEG or PNG).")] string imageBase64,
-        [Description("Base64-encoded mask image. White pixels = area to fill, black pixels = keep unchanged. Omit to restyle the whole image.")] string? maskBase64 = null,
+        [Description("Base64-encoded mask image (required). White pixels = area to fill, black pixels = keep unchanged. Use an all-white mask to restyle the entire image.")] string maskBase64 = "",
         [Description("Guidance strength (1.5-100). Low (5-15) = preserves original style, high (30-70) = follows prompt closely. Default: 30")] float guidance = 30f,
         [Description("Diffusion steps (1-50). More steps = higher quality but slower. 20-30 is a good balance. Default: 28")] int steps = 28,
         [Description("Return an HTML <img> tag instead of a plain URL. Default: true")] bool returnHtmlTag = true,
+        [Description("Return the image as base64 instead of a server URL. Combined with returnHtmlTag: embeds as data URI in <img>; without: returns raw base64. Default: false")] bool returnBase64 = false,
+        [Description("Optional cache key. If an image with this key is already cached on the server, it is returned immediately without calling the API. Omit to always generate a fresh image.")] string? cacheKey = null,
         CancellationToken ct = default)
     {
+        const string mimeType = "image/jpeg";
+        if (cacheKey is not null && imageStore.Get(cacheKey) is var cached and not null)
+            return BuildResult(cacheKey, cached.Value.Bytes, cached.Value.MimeType, returnHtmlTag, returnBase64);
+
         var body = new JsonObject
         {
             ["prompt"] = prompt,
@@ -132,12 +152,13 @@ public class BlackforestLabWrapper(IBflApiClient bfl, ImageStore imageStore, IHt
             ["guidance"] = guidance,
             ["steps"] = steps,
         };
-        if (maskBase64 is not null) body["mask"] = maskBase64;
+        if (!string.IsNullOrEmpty(maskBase64)) body["mask"] = maskBase64;
 
         var id = await bfl.SubmitJobAsync("/v1/flux-pro-1.0-fill", body, ct);
         var imageUrl = await PollForResultUrl(id, ct);
         var bytes = await bfl.DownloadImageAsync(imageUrl, ct);
-        return BuildResult(imageStore.Store(bytes, "image/jpeg", ImageTtl), returnHtmlTag);
+        var imageId = (!returnBase64 || cacheKey is not null) ? imageStore.Store(bytes, mimeType, ImageTtl, cacheKey) : null;
+        return BuildResult(imageId, bytes, mimeType, returnHtmlTag, returnBase64);
     }
 
     [McpServerTool]
@@ -150,8 +171,14 @@ public class BlackforestLabWrapper(IBflApiClient bfl, ImageStore imageStore, IHt
     private TimeSpan ImageTtl =>
         TimeSpan.FromMinutes(config.GetValue<int>("McpServer:ImageTtlMinutes", 60));
 
-    private string BuildResult(string imageId, bool returnHtmlTag)
+    private string BuildResult(string? imageId, byte[] bytes, string mimeType, bool returnHtmlTag, bool returnBase64)
     {
+        if (returnBase64)
+        {
+            var b64 = Convert.ToBase64String(bytes);
+            return returnHtmlTag ? $"<img src=\"data:{mimeType};base64,{b64}\" />" : b64;
+        }
+
         var req = httpContextAccessor.HttpContext!.Request;
         var url = $"{req.Scheme}://{req.Host}/images/{imageId}";
         return returnHtmlTag ? $"<img src=\"{url}\" />" : url;
