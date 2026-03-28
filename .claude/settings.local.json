@@ -3,7 +3,12 @@
     "allow": [
       "WebFetch(domain:docs.bfl.ml)",
       "WebSearch",
-      "WebFetch(domain:docs.bfl.ai)"
+      "WebFetch(domain:docs.bfl.ai)",
+      "Bash(dotnet outdated:*)",
+      "Bash(docker pull:*)",
+      "Bash(curl -s \"https://mcr.microsoft.com/v2/dotnet/sdk/tags/list\")",
+      "WebFetch(domain:mcr.microsoft.com)",
+      "WebFetch(domain:hub.docker.com)"
     ]
   }
 }

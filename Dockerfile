@@ -16,7 +16,7 @@ RUN dotnet publish Mcp.Proxy.Server/Mcp.Proxy.Server.csproj \
     /p:MinVerVersionOverride=$VERSION
 
 # Runtime stage — plain Alpine; AOT+musl binary only needs musl libc (built-in) + ca-certificates
-FROM alpine:3.21
+FROM alpine:3.23
 RUN apk add --no-cache ca-certificates
 WORKDIR /app
 COPY --from=build /app/publish .
