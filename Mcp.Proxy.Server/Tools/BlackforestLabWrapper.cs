@@ -43,6 +43,7 @@ public class BlackforestLabWrapper(IBflApiClient bfl, ImageStore imageStore, IHt
         [Description("Image width in pixels. FLUX.2 models only. Must be a multiple of 16. Combined with height must not exceed 4MP (e.g. 2048x2048). Omit for model default.")] int? width = null,
         [Description("Image height in pixels. FLUX.2 models only. Must be a multiple of 16. Combined with width must not exceed 4MP. Omit for model default.")] int? height = null,
         [Description("Aspect ratio for Kontext models (e.g. \"16:9\", \"1:1\", \"4:3\", \"9:16\"). Range: 3:7 to 7:3. Omit for model default (1:1).")] string? aspectRatio = null,
+        [Description("Return an HTML <img> tag instead of a plain URL. Default: true")] bool returnHtmlTag = true,
         CancellationToken ct = default)
     {
         var body = new JsonObject
@@ -59,7 +60,7 @@ public class BlackforestLabWrapper(IBflApiClient bfl, ImageStore imageStore, IHt
         var id = await bfl.SubmitJobAsync($"/v1/{model}", body, ct);
         var imageUrl = await PollForResultUrl(id, ct);
         var bytes = await bfl.DownloadImageAsync(imageUrl, ct);
-        return BuildImageUrl(imageStore.Store(bytes, $"image/{outputFormat}", ImageTtl));
+        return BuildResult(imageStore.Store(bytes, $"image/{outputFormat}", ImageTtl), returnHtmlTag);
     }
 
     [McpServerTool]
@@ -89,6 +90,7 @@ public class BlackforestLabWrapper(IBflApiClient bfl, ImageStore imageStore, IHt
         [Description("Image width in pixels. FLUX.2 models only. Must be multiple of 16, up to 4MP total. Omit for model default.")] int? width = null,
         [Description("Image height in pixels. FLUX.2 models only. Must be multiple of 16, up to 4MP total. Omit for model default.")] int? height = null,
         [Description("Aspect ratio for Kontext models (e.g. \"16:9\", \"1:1\"). Omit for model default.")] string? aspectRatio = null,
+        [Description("Return an HTML <img> tag instead of a plain URL. Default: true")] bool returnHtmlTag = true,
         CancellationToken ct = default)
     {
         var body = new JsonObject
@@ -106,7 +108,7 @@ public class BlackforestLabWrapper(IBflApiClient bfl, ImageStore imageStore, IHt
         var id = await bfl.SubmitJobAsync($"/v1/{model}", body, ct);
         var imageUrl = await PollForResultUrl(id, ct);
         var bytes = await bfl.DownloadImageAsync(imageUrl, ct);
-        return BuildImageUrl(imageStore.Store(bytes, $"image/{outputFormat}", ImageTtl));
+        return BuildResult(imageStore.Store(bytes, $"image/{outputFormat}", ImageTtl), returnHtmlTag);
     }
 
     [McpServerTool]
@@ -120,6 +122,7 @@ public class BlackforestLabWrapper(IBflApiClient bfl, ImageStore imageStore, IHt
         [Description("Base64-encoded mask image. White pixels = area to fill, black pixels = keep unchanged. Omit to restyle the whole image.")] string? maskBase64 = null,
         [Description("Guidance strength (1.5-100). Low (5-15) = preserves original style, high (30-70) = follows prompt closely. Default: 30")] float guidance = 30f,
         [Description("Diffusion steps (1-50). More steps = higher quality but slower. 20-30 is a good balance. Default: 28")] int steps = 28,
+        [Description("Return an HTML <img> tag instead of a plain URL. Default: true")] bool returnHtmlTag = true,
         CancellationToken ct = default)
     {
         var body = new JsonObject
@@ -134,7 +137,7 @@ public class BlackforestLabWrapper(IBflApiClient bfl, ImageStore imageStore, IHt
         var id = await bfl.SubmitJobAsync("/v1/flux-pro-1.0-fill", body, ct);
         var imageUrl = await PollForResultUrl(id, ct);
         var bytes = await bfl.DownloadImageAsync(imageUrl, ct);
-        return BuildImageUrl(imageStore.Store(bytes, "image/jpeg", ImageTtl));
+        return BuildResult(imageStore.Store(bytes, "image/jpeg", ImageTtl), returnHtmlTag);
     }
 
     [McpServerTool]
@@ -147,10 +150,11 @@ public class BlackforestLabWrapper(IBflApiClient bfl, ImageStore imageStore, IHt
     private TimeSpan ImageTtl =>
         TimeSpan.FromMinutes(config.GetValue<int>("McpServer:ImageTtlMinutes", 60));
 
-    private string BuildImageUrl(string imageId)
+    private string BuildResult(string imageId, bool returnHtmlTag)
     {
         var req = httpContextAccessor.HttpContext!.Request;
-        return $"{req.Scheme}://{req.Host}/images/{imageId}";
+        var url = $"{req.Scheme}://{req.Host}/images/{imageId}";
+        return returnHtmlTag ? $"<img src=\"{url}\" />" : url;
     }
 
     private async Task<string> PollForResultUrl(string id, CancellationToken ct)
