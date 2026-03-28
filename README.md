@@ -2,6 +2,26 @@
 
 A personal MCP proxy server with single-user OAuth2 authentication (Authorization Code flow + PKCE), built with ASP.NET Core.
 
+## MCP Tools
+
+### Black Forest Labs — image generation
+
+| Tool | Description |
+| --- | --- |
+| `GenerateImage` | Text-to-image using any FLUX model. Supports `width`/`height` (FLUX.2, multiples of 16, up to 4MP) and `aspect_ratio` (Kontext, e.g. `"16:9"`). |
+| `EditImage` | Image-to-image editing via `input_image`. Works with FLUX.2 and Kontext models. |
+| `FillImage` | Masked inpainting using FLUX Fill (`flux-pro-1.0-fill`). White mask = fill, black = keep. |
+| `GetBflCredits` | Returns the current credit balance for the configured API key. |
+
+All image tools return an HTML `<img>` tag by default (`returnHtmlTag: true`). Pass `returnHtmlTag: false` to get a plain URL instead. Images are served from `/images/{id}` and expire after `ImageTtlMinutes`.
+
+### Utility
+
+| Tool | Description |
+| --- | --- |
+| `GetServerVersion` | Returns the running server version. |
+| `GetRandomNumber` | Returns a random number in a given range. |
+
 ## Authentication
 
 The server uses OAuth2 Authorization Code flow with PKCE. When Claude web connects, it will:
@@ -80,10 +100,11 @@ Connect from Claude web or an MCP client at `http://localhost:5000`.
 Build and run:
 
 ```bash
-docker build -t personalmcpproxy:latest ./Mcp.Proxy.Server
+docker build -t personalmcpproxy:latest .
 docker run -p 5000:5000 \
   -e Authentication__Schemes__SingleUserOAuth__UserName=alice \
   -e Authentication__Schemes__SingleUserOAuth__Password=secret \
+  -e BlackForestLabs__ApiKey=your-bfl-api-key \
   personalmcpproxy:latest
 ```
 
@@ -109,4 +130,10 @@ server {
 
 ```bash
 dotnet test
+```
+
+Live smoke tests against the real BFL API are skipped by default. Set `MCPPROXYAPP_BFL_API_KEY` to run them:
+
+```powershell
+$env:MCPPROXYAPP_BFL_API_KEY="your-key"; dotnet test --filter "BflApiSmokeTest"
 ```
