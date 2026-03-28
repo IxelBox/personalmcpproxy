@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:docs.bfl.ml)",
+      "WebSearch",
+      "WebFetch(domain:docs.bfl.ai)"
+    ]
+  }
+}

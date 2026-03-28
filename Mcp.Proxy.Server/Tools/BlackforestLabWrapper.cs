@@ -12,12 +12,19 @@ public class BlackforestLabWrapper(IBflApiClient bfl, ImageStore imageStore, IHt
     [Description("""
         Generate an image using a Black Forest Labs FLUX model. Returns a URL to the generated image served from this server (expires in 30 minutes).
         Choose model by use-case:
-          flux-2-pro-preview  - latest FLUX.2 [pro], best overall quality (default, recommended)
-          flux-2-flex         - FLUX.2 [flex], customizable generation and editing
-          flux-kontext-pro    - FLUX.1 Kontext [pro], context-aware generation and editing
-          flux-kontext-max    - FLUX.1 Kontext [max], advanced context editing
-          flux-pro-1.1-ultra  - FLUX1.1 [pro] Ultra, maximum quality up to 4MP
-          flux-pro-1.1        - FLUX1.1 [pro], fast high-quality generation
+          flux-2-pro-preview      - latest FLUX.2 [pro], best overall quality (default, recommended); ~2x faster as of Mar 2026
+          flux-2-pro              - pinned/stable FLUX.2 [pro] snapshot
+          flux-2-max              - FLUX.2 top tier; incorporates web knowledge/grounding, up to 10 reference images
+          flux-2-flex             - FLUX.2 [flex], exposes steps and guidance for fine control
+          flux-2-klein-9b-preview - FLUX.2 Klein rolling latest, sub-second inference, very cheap
+          flux-2-klein-9b         - FLUX.2 Klein 9B pinned, fast and cheap
+          flux-2-klein-4b         - FLUX.2 Klein 4B, fastest and cheapest ($0.014/image)
+          flux-kontext-pro        - FLUX.1 Kontext [pro], context-aware text-to-image and editing
+          flux-kontext-max        - FLUX.1 Kontext [max], advanced editing with stricter prompt adherence and better typography
+          flux-pro-1.1-ultra      - FLUX1.1 [pro] Ultra, maximum quality up to 4MP
+          flux-pro-1.1            - FLUX1.1 [pro], fast high-quality generation
+        Width/height apply to FLUX.2 models (must be multiples of 16, up to 4MP total).
+        AspectRatio applies to Kontext models (e.g. "16:9", "1:1", "4:3"; range 3:7 to 7:3).
 """)]
     public async Task<string> GenerateImage(
         [Description("""
@@ -33,6 +40,9 @@ public class BlackforestLabWrapper(IBflApiClient bfl, ImageStore imageStore, IHt
         [Description("Output format: jpeg (smaller, faster) or png (lossless). Default: jpeg")] string outputFormat = "jpeg",
         [Description("Safety tolerance 0-6: 0-2 = strict filtering, 3-4 = balanced, 5-6 = permissive. Default: 5")] int safetyTolerance = 5,
         [Description("Seed for reproducible results. Same seed + prompt = same image.")] int? seed = null,
+        [Description("Image width in pixels. FLUX.2 models only. Must be a multiple of 16. Combined with height must not exceed 4MP (e.g. 2048x2048). Omit for model default.")] int? width = null,
+        [Description("Image height in pixels. FLUX.2 models only. Must be a multiple of 16. Combined with width must not exceed 4MP. Omit for model default.")] int? height = null,
+        [Description("Aspect ratio for Kontext models (e.g. \"16:9\", \"1:1\", \"4:3\", \"9:16\"). Range: 3:7 to 7:3. Omit for model default (1:1).")] string? aspectRatio = null,
         CancellationToken ct = default)
     {
         var body = new JsonObject
@@ -42,6 +52,56 @@ public class BlackforestLabWrapper(IBflApiClient bfl, ImageStore imageStore, IHt
             ["safety_tolerance"] = safetyTolerance,
         };
         if (seed.HasValue) body["seed"] = seed.Value;
+        if (width.HasValue) body["width"] = width.Value;
+        if (height.HasValue) body["height"] = height.Value;
+        if (aspectRatio is not null) body["aspect_ratio"] = aspectRatio;
+
+        var id = await bfl.SubmitJobAsync($"/v1/{model}", body, ct);
+        var imageUrl = await PollForResultUrl(id, ct);
+        var bytes = await bfl.DownloadImageAsync(imageUrl, ct);
+        return BuildImageUrl(imageStore.Store(bytes, $"image/{outputFormat}", ImageTtl));
+    }
+
+    [McpServerTool]
+    [Description("""
+        Edit or restyle an existing image using FLUX.2 or FLUX.1 Kontext models. Provide an input image and a prompt describing the desired changes.
+        Returns a URL to the result image served from this server (expires in 30 minutes).
+        Choose model by use-case:
+          flux-2-pro-preview  - best quality editing, handles complex scene changes (default)
+          flux-2-max          - top tier; best for multi-reference editing (up to 8 reference images)
+          flux-2-flex         - fine-grained control via steps/guidance
+          flux-kontext-pro    - natural-language editing, great for targeted changes (e.g. "change shirt to red")
+          flux-kontext-max    - stricter prompt adherence, better for text/typography changes
+        Width/height apply to FLUX.2 models (multiples of 16, up to 4MP).
+        AspectRatio applies to Kontext models (e.g. "16:9", "1:1").
+""")]
+    public async Task<string> EditImage(
+        [Description("""
+            Text prompt describing the desired edit or output. Be specific about what to change.
+            For targeted edits: "Change the car color to red" or "Replace the background with a forest".
+            For style transfer: "Render in watercolor style, keep composition".
+            """)] string prompt,
+        [Description("Base64-encoded input image (JPEG or PNG) to edit or use as reference.")] string imageBase64,
+        [Description("Model to use. See tool description for guidance. Default: flux-2-pro-preview")] string model = "flux-2-pro-preview",
+        [Description("Output format: jpeg or png. Default: jpeg")] string outputFormat = "jpeg",
+        [Description("Safety tolerance 0-6. Default: 5")] int safetyTolerance = 5,
+        [Description("Seed for reproducible results.")] int? seed = null,
+        [Description("Image width in pixels. FLUX.2 models only. Must be multiple of 16, up to 4MP total. Omit for model default.")] int? width = null,
+        [Description("Image height in pixels. FLUX.2 models only. Must be multiple of 16, up to 4MP total. Omit for model default.")] int? height = null,
+        [Description("Aspect ratio for Kontext models (e.g. \"16:9\", \"1:1\"). Omit for model default.")] string? aspectRatio = null,
+        CancellationToken ct = default)
+    {
+        var body = new JsonObject
+        {
+            ["prompt"] = prompt,
+            ["input_image"] = imageBase64,
+            ["output_format"] = outputFormat,
+            ["safety_tolerance"] = safetyTolerance,
+        };
+        if (seed.HasValue) body["seed"] = seed.Value;
+        if (width.HasValue) body["width"] = width.Value;
+        if (height.HasValue) body["height"] = height.Value;
+        if (aspectRatio is not null) body["aspect_ratio"] = aspectRatio;
 
         var id = await bfl.SubmitJobAsync($"/v1/{model}", body, ct);
         var imageUrl = await PollForResultUrl(id, ct);
